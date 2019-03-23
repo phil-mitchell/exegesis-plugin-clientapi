@@ -44,6 +44,21 @@ module.exports = function( grunt ) {
                 basePath: './coverage/instrument/'
             }
         },
+        karma: {
+            integration: {
+                files: [ { src: 'test/integration/**/*.spec.js' } ],
+                frameworks: [ 'mocha', 'chai' ],
+                port: 3001,
+                singleRun: true,
+                browsers: [ 'ChromeHeadless' ],
+                reporters: [ 'progress' ],
+                colors: true,
+                proxies: {
+                    '/pets': 'http://localhost:3000/pets',
+                    '/client': 'http://localhost:3000/client'
+                }
+            }
+        },
         mochaTest: {
             options: {
                 reporter: 'spec-xunit-file'
@@ -76,13 +91,14 @@ module.exports = function( grunt ) {
     grunt.loadNpmTasks( 'grunt-env' );
     grunt.loadNpmTasks( 'grunt-contrib-clean' );
     grunt.loadNpmTasks( 'grunt-mkdir' );
+    grunt.loadNpmTasks( 'grunt-karma' );
 
     grunt.registerTask( 'dummyCoverage', () => {
         global['__coverage__'] = global['__coverage__'] || {};
     });
 
     grunt.registerTask( 'unit', [ 'env:unit', 'mkdir:report', 'mochaTest:unit' ] );
-    grunt.registerTask( 'integration', [ 'env:integration', 'express:test', 'mkdir:report', 'mochaTest:integration', 'express:test:stop' ] );
+    grunt.registerTask( 'integration', [ 'env:integration', 'express:test', 'mkdir:report', 'karma:integration', 'express:test:stop' ] );
     grunt.registerTask( 'default', [ 'clean', 'integration' ] );
     grunt.registerTask( 'coverage', [ 'clean', 'env:coverage', 'instrument',
                                       'unit', 'integration', 'dummyCoverage',

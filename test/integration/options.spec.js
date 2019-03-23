@@ -1,76 +1,33 @@
 'use strict';
 
-var superagent = require( 'superagent' );
-var expect = require( 'chai' ).expect;
+/* global expect */
+/* global System */
 
-describe( 'No options', function() {
-    it( 'renders HTML', function( done ) {
-        superagent
-        .get( 'http://localhost:3000/api-doc' )
-        .end( function( e, res ) {
-            expect( e ).to.be.null;
-            expect( res.text ).to.contain( '<title>Swagger UI</title>' );
-            expect( res.text ).to.contain( '.swagger-ui .topbar .download-url-wrapper { display: none }' );
-            done();
+describe( 'ES6 module', function() {
+    before( function() {
+        return import( 'http://localhost:3001/client/api.js' ).then( apiModule => {
+            this.api = apiModule.default;
         });
     });
-    it( 'contains the Pet Store API', function( done ) {
-        superagent
-        .get( 'http://localhost:3000/api-doc/swagger-ui-init.js' )
-        .end( function( e, res ) {
-            expect( e ).to.be.null;
-            expect( Buffer.isBuffer( res.body ) ).to.be.true;
-            expect( res.body.toString() ).to.contain( '"/pets"' );
-            expect( res.body.toString() ).to.contain( '"Pet"' );
-            done();
-        });
+    it( 'loaded the API module', function() {
+        expect( this.api ).to.exist;
     });
-});
-
-describe( 'Custom title', function() {
-    it( 'renders HTML', function( done ) {
-        superagent
-        .get( 'http://localhost:3000/api-doc-title' )
-        .end( function( e, res ) {
-            expect( e ).to.be.null;
-            expect( res.text ).to.contain( '<title>Petstore API</title>' );
-            expect( res.text ).to.contain( '.swagger-ui .topbar .download-url-wrapper { display: none }' );
-            done();
+    describe( 'no options', function() {
+        before( function() {
+            this.client = new this.api();
         });
-    });
-    it( 'contains the Pet Store API', function( done ) {
-        superagent
-        .get( 'http://localhost:3000/api-doc-title/swagger-ui-init.js' )
-        .end( function( e, res ) {
-            expect( e ).to.be.null;
-            expect( Buffer.isBuffer( res.body ) ).to.be.true;
-            expect( res.body.toString() ).to.contain( '"/pets"' );
-            expect( res.body.toString() ).to.contain( '"Pet"' );
-            done();
+        it( 'created the client', function() {
+            expect( this.client ).to.exist;
         });
-    });
-});
-
-describe( 'Explorer', function() {
-    it( 'renders HTML', function( done ) {
-        superagent
-        .get( 'http://localhost:3000/api-doc-explorer' )
-        .end( function( e, res ) {
-            expect( e ).to.be.null;
-            expect( res.text ).to.contain( '<title>Swagger UI</title>' );
-            expect( res.text ).to.not.contain( '.swagger-ui .topbar .download-url-wrapper { display: none }' );
-            done();
+        it( 'can call the listPets API', function() {
+            return this.client[ 'get /pets' ]().then( response => {
+                expect( response ).to.eql( [ { name: 'pet1' } ] );
+            });
         });
-    });
-    it( 'contains the Pet Store API', function( done ) {
-        superagent
-        .get( 'http://localhost:3000/api-doc-explorer/swagger-ui-init.js' )
-        .end( function( e, res ) {
-            expect( e ).to.be.null;
-            expect( Buffer.isBuffer( res.body ) ).to.be.true;
-            expect( res.body.toString() ).to.contain( '"/pets"' );
-            expect( res.body.toString() ).to.contain( '"Pet"' );
-            done();
+        it( 'can call the createPets API', function() {
+            return this.client[ 'post /pets' ]({ name: 'pet2' }).then( response => {
+                expect( response ).to.eql({ name: 'pet2', created: true });
+            });
         });
     });
 });

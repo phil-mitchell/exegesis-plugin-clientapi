@@ -12,26 +12,19 @@ async function createServer() {
     const app = express();
 
     const options = {
-        controllers: {},
+        controllers: {
+            petStoreController: {
+                listPets: () => {
+                    return[ { name: 'pet1' } ];
+                },
+                createPets: ( context ) => {
+                    return({ name: context.requestBody.name, created: true });
+                }
+            }
+        },
         allowMissingControllers: true,
         plugins: [
             require_helper( 'index.js' )({
-                app: app,
-                path: '/api-doc'
-            }),
-            require_helper( 'index.js' )({
-                app: app,
-                path: '/api-doc-title',
-                swaggerUIOptions: {
-                    customSiteTitle: 'Petstore API'
-                }
-            }),
-            require_helper( 'index.js' )({
-                app: app,
-                path: '/api-doc-explorer',
-                swaggerUIOptions: {
-                    explorer: true
-                }
             })
         ]
     };
@@ -76,7 +69,7 @@ createServer()
 .then( server => {
     server.listen( 3000 );
     console.log( 'Listening on port 3000' );
-    console.log( 'Try visiting http://localhost:3000/api-docs' );
+    console.log( 'Try visiting http://localhost:3000/client/api.js' );
 })
 .catch( err => {
     console.error( err.stack );
