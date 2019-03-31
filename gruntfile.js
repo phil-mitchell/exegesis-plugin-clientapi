@@ -50,12 +50,18 @@ module.exports = function( grunt ) {
                 frameworks: [ 'mocha', 'chai' ],
                 port: 3001,
                 singleRun: true,
-                browsers: [ 'ChromeHeadless' ],
+                browsers: [ 'ChromeHeadlessNoSandbox' ],
                 reporters: [ 'progress' ],
                 colors: true,
                 proxies: {
                     '/pets': 'http://localhost:3000/pets',
                     '/client': 'http://localhost:3000/client'
+                },
+                customLaunchers: {
+                    ChromeHeadlessNoSandbox: {
+                        base: 'ChromeHeadless',
+                        flags: [ '--no-sandbox', '--disable-setuid-sandbox' ]
+                    }
                 }
             }
         },
