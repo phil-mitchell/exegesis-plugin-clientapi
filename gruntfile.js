@@ -99,7 +99,7 @@ module.exports = function( grunt ) {
 
     grunt.registerTask( 'unit', [ 'env:unit', 'mkdir:report', 'mochaTest:unit' ] );
     grunt.registerTask( 'integration', [ 'env:integration', 'express:test', 'mkdir:report', 'karma:integration', 'express:test:stop' ] );
-    grunt.registerTask( 'default', [ 'clean', 'integration' ] );
+    grunt.registerTask( 'default', [ 'clean', 'unit', 'integration' ] );
     grunt.registerTask( 'coverage', [ 'clean', 'env:coverage', 'instrument',
                                       'unit', 'integration', 'dummyCoverage',
                                       'storeCoverage', 'makeReport' ] );

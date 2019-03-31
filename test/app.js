@@ -14,12 +14,38 @@ async function createServer() {
     const options = {
         controllers: {
             petStoreController: {
-                listPets: () => {
+                listPets: ( context ) => {
+                    if( context.params.query.limit === 0 ) {
+                        return[];
+                    }
                     return[ { name: 'pet1' } ];
                 },
                 createPets: ( context ) => {
                     return({ name: context.requestBody.name, created: true });
+                },
+                showPetById: ( context ) => {
+                    return{ name: `pet${context.params.path.petId}` };
                 }
+            }
+        },
+        authenticators: {
+            basicAuth: async function( context ) {
+                if( !context.req.headers.authorization ) {
+                    return{ type: 'missing' };
+                }
+                return{ type: 'success', user: { name: `basicUser ${context.params.header.authorization}` } };
+            },
+            apiKeyHeaderAuth: async function( context, info ) {
+                if( !context.req.headers[info.name.toLowerCase()] ) {
+                    return{ type: 'missing' };
+                }
+                return{ type: 'success', user: { name: `headerUser ${context.params.header[info.name]}` } };
+            },
+            apiKeyQueryAuth: async function( context, info ) {
+                if( !context.req.query[info.name] ) {
+                    return{ type: 'missing' };
+                }
+                return{ type: 'success', user: { name: `queryUser ${context.params.query[info.name]}` } };
             }
         },
         allowMissingControllers: true,

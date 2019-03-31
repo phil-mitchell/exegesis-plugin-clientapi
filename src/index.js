@@ -6,10 +6,24 @@ const Terser = require( 'terser' );
 const controllerName = 'exegesis-plugin-clientapi';
 const methods = [ 'head', 'get', 'post', 'put', 'delete', 'connect', 'options', 'trace', 'patch' ];
 
-function createAPIFunction( pathObject, operationObject ) {
+const files = {
+    'api.js': {
+        type: 'module',
+        minified: false
+    },
+    'api.min.js': {
+        type: 'module',
+        minified: true
+    }
+};
+
+function createAPIFunction( pathObject, operationObject, globalSecurity ) {
     let clientOperation = {
         pathParameters: [],
-        queryParameters: []
+        queryParameters: [],
+        security: operationObject.security ?
+            ( operationObject.security || [] ).reduce( ( acc, x ) => acc.concat( Object.keys( x ) ), [] ) :
+            globalSecurity
     };
     if( operationObject.parameters ) {
         for( let parameter of operationObject.parameters ) {
@@ -17,6 +31,10 @@ function createAPIFunction( pathObject, operationObject ) {
                 clientOperation.pathParameters.push( parameter.name );
             } else if( parameter.in === 'query' ) {
                 clientOperation.queryParameters.push( parameter.name );
+            } else if( parameter.in === 'header' ) {
+                clientOperation.headerParameters.push( parameter.name );
+            } else if( parameter.in === 'cookie' ) {
+                clientOperation.sendCookies = true;
             }
         }
     }
@@ -44,36 +62,43 @@ class ClientAPIPlugin {
             throw new Error( `OpenAPI version ${apiDoc.openapi} not supported` );
         }
 
-        options = Object.assign({ path: '/client/api.js' }, options );
+        options = Object.assign({ path: '/client' }, options );
         this._options = options;
 
-        apiDoc.paths[options.path] = {
-            'get': {
-                summary: 'Load the client API',
-                'x-exegesis-controller': controllerName,
-                'x-exegesis-clientapi-skip': true,
-                operationId: 'get ' + options.path,
-                security: [],
-                responses: {
-                    '200': {
-                        description: 'The client API',
-                        content: {
-                            'text/plain': {
-                                schema: { type: 'string' }
+        apiDoc.paths = apiDoc.paths || {};
+        for( let file of Object.keys( files ) ) {
+            let path = options.path + '/' + file;
+            apiDoc.paths[path] = {
+                'get': {
+                    summary: 'Load the client API',
+                    'x-exegesis-controller': controllerName,
+                    'x-exegesis-clientapi-skip': true,
+                    operationId: 'get ' + path,
+                    security: [],
+                    responses: {
+                        '200': {
+                            description: 'The client API',
+                            content: {
+                                'text/plain': {
+                                    schema: { type: 'string' }
+                                }
                             }
                         }
                     }
                 }
-            }
-        };
+            };
+        }
     }
 
     preCompile({ apiDoc, options }) {
         var pluginOptions = this._options;
 
         var clientOperations = {};
+        var securitySchemes = Object.assign({}, ( apiDoc.components || {}).securitySchemes || {});
+        var allowCORS = !!pluginOptions.allowCORS;
         class ClientAPI {
-            constructor() {
+            constructor( fetchArgs ) {
+                this._fetchArgs = fetchArgs || {};
                 return new Proxy( this, {
                     has: function( object, property ) {
                         if( typeof( property ) !== 'string' || Reflect.has( object, property ) ) {
@@ -85,15 +110,61 @@ class ClientAPIPlugin {
                         if( typeof( property ) !== 'string' || Reflect.has( object, property ) ) {
                             return Reflect.get( object, property );
                         }
+                        if( !this.has( object, property ) ) {
+                            return undefined;
+                        }
                         return Reflect.get( object, '$handleAPIOperation' ).bind( object, property );
                     }
                 });
+            }
+            set fetchArgs( value ) {
+                this._fetchArgs = value || {};
+            }
+            get fetchArgs() {
+                return this._fetchArgs;
+            }
+            setSecurity( name, value ) {
+                var scheme = securitySchemes[name];
+                if( !scheme ) {
+                    throw Error( `Unknown security scheme: ${name}` );
+                }
+                this.security = this.security || {};
+                this.security[name] = {};
+                if( scheme.type === 'http' ) {
+                    this.security[name].headers = {
+                        authorization: `${scheme.scheme} ${value}`
+                    };
+                } else if( scheme.type === 'apiKey' ) {
+                    if( scheme.in === 'header' ) {
+                        this.security[name].headers = {};
+                        this.security[name].headers[scheme.name] = value;
+                    } else if( scheme.in === 'query' ) {
+                        this.security[name].queryParameters = {};
+                        this.security[name].queryParameters[scheme.name] = value;
+                    } else if( scheme.in === 'cookie' ) {
+                        this.security[name].credentials = value || ( allowCORS ? 'include' : 'same-origin' );
+                    } else {
+                        throw Error( `Don't know how to handle scheme parameter in ${scheme.in}` );
+                    }
+                } else {
+                    throw Error( `Don't know how to handle scheme type ${scheme.type}` );
+                }
+            }
+            unsetSecurity( name ) {
+                delete this.security[name];
+            }
+            clearSecurity() {
+                delete this.security;
             }
             async $handleAPIOperation( operationName, ...inputParameters ) {
                 let[ method, url ] = operationName.split( ' ', 2 );
                 let operation = clientOperations[operationName];
                 let body = undefined;
-                let headers = {};
+                let headers = this.fetchArgs.headers || {};
+                let queryParameters = {};
+                let credentials = this.fetchArgs.credentials || (
+                    operation.sendCookies ? ( allowCORS ? 'include' : 'same-origin' ) : 'omit'
+                );
                 for( let parameterName of operation.pathParameters ) {
                     let parameterValue = inputParameters.shift();
                     if( parameterValue === undefined || parameterValue === null ) {
@@ -104,10 +175,8 @@ class ClientAPIPlugin {
                     }
                     url = url.replace( `{${parameterName}}`, parameterValue.toString() );
                 }
-                url = new URL( url, window.location.origin );
                 if( operation.queryParameters.length > 0 ) {
-                    let qs = inputParameters.shift() || {};
-                    Object.keys( qs ).forEach( key => url.searchParams.append( key, qs[key] ) );
+                    Object.assign( queryParameters, inputParameters.shift() || {});
                 }
                 if( operation.hasBody && method !== 'get' && method !== 'head' ) {
                     body = inputParameters.shift();
@@ -120,13 +189,30 @@ class ClientAPIPlugin {
                     }
                 }
                 if( inputParameters.length ) {
+                    Object.assign( headers, inputParameters.shift() || {});
+                }
+                if( inputParameters.length ) {
                     throw Error( `Extra parameters were provided` );
                 }
-                return fetch( url, {
+                for( let schemeName of operation.security || [] ) {
+                    let scheme = ( this.security || {})[schemeName];
+                    if( scheme ) {
+                        Object.assign( headers, scheme.headers || {});
+                        Object.assign( queryParameters, scheme.queryParameters || {});
+                        credentials = scheme.credentials || credentials;
+                    }
+                }
+
+                url = new URL( url, window.location.origin );
+                Object.keys( queryParameters ).forEach( key => url.searchParams.append( key, queryParameters[key] ) );
+
+                var fetchArgs = Object.assign({}, this.fetchArgs, {
                     method: method,
                     headers: headers,
+                    credentials: credentials,
                     body: body
-                }).then( response => {
+                });
+                return fetch( url, fetchArgs ).then( response => {
                     if( !response.ok ) {
                         let e = new Error( response.statusText );
                         e.response = response;
@@ -160,26 +246,40 @@ class ClientAPIPlugin {
             }
         }
 
-        for( let path of Object.keys( apiDoc.paths ) ) {
+        for( let path of Object.keys( apiDoc.paths || {}) ) {
             let pathObject = apiDoc.paths[path];
             for( let method of methods ) {
                 let operationObject = pathObject[method];
                 if( !pathObject['x-exegesis-clientapi-skip'] && operationObject && !operationObject['x-exegesis-clientapi-skip'] ) {
-                    clientOperations[`${method} ${path}`] = createAPIFunction( pathObject, operationObject );
+                    clientOperations[`${method} ${path}`] = createAPIFunction(
+                        pathObject, operationObject, (
+                            apiDoc.security || [] ).reduce( ( acc, x ) => acc.concat( Object.keys( x ) ), [] )  );
                 }
             }
         }
 
         options.controllers[controllerName] = options.controllers[controllerName] || {};
-        options.controllers[controllerName]['get ' + pluginOptions.path ] = async function( context ) {
-            var apiText = `const clientOperations = ${JSON.stringify( clientOperations, null, '  ' )};\nexport default ${ClientAPI.toString()}`;
+        for( let file of Object.keys( files ) ) {
+            let path = pluginOptions.path + '/' + file;
+            options.controllers[controllerName]['get ' + path ] = async function( context ) {
+                var apiText = '';
+                if( files[file].type === 'module' ) {
+                    apiText = `const securitySchemes = ${JSON.stringify( securitySchemes )};\n` +
+                        `const clientOperations = ${JSON.stringify( clientOperations, null, '  ' )};\n` +
+                        `const allowCORS = ${JSON.stringify( allowCORS, null, ' ' )};\n` +
+                        `export default ${ClientAPI.toString()}`;
+                }
 
-            var clientAPI = {};
-            clientAPI[pluginOptions.path] = apiText;
-            var minified = Terser.minify( clientAPI );
-            context.res.set( 'content-type', 'application/javascript' );
-            return minified.code;
-        };
+                if( files[file].minified ) {
+                    var clientAPI = {};
+                    clientAPI[pluginOptions.path] = apiText;
+                    apiText = Terser.minify( clientAPI ).code;
+                }
+
+                context.res.set( 'content-type', 'application/javascript' );
+                return apiText;
+            };
+        }
     }
 }
 

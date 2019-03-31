@@ -1,0 +1,13 @@
+{
+    "plugins": [
+        "import"
+    ],
+    "env": {
+        "browser": true,
+        "qunit": true
+    },
+    "extends": ]
+        "plugin:import/errors",
+        "plugin:import/warnings"
+    ]
+}
