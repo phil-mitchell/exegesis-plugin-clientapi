@@ -166,6 +166,26 @@ describe( 'ES6 module', function() {
                 expect( response ).to.eql({ name: 'pet2', created: true });
             });
         });
+        it( 'can call the createPets API concurrently', function() {
+            let refreshCount = 0;
+            this.client.setSecurity( 'apiKeyHeaderAuth', 'MyHeaderAuth', new Date().getTime(), async() => {
+                refreshCount++;
+                return new Promise( resolve => {
+                    setTimeout( () => {
+                        this.client.setSecurity( 'apiKeyHeaderAuth', 'MyHeaderAuth2' );
+                        resolve();
+                    }, 50 );
+                });
+            });
+            return Promise.all( [
+                this.client[ 'post /pets' ]({ name: 'pet2' }),
+                this.client[ 'post /pets' ]({ name: 'pet3' })
+            ] ).then( ( response ) => {
+                expect( response[0] ).to.eql({ name: 'pet2', created: true });
+                expect( response[1] ).to.eql({ name: 'pet3', created: true });
+                expect( refreshCount ).to.eql( 1 );
+            });
+        });
         it( 'can call the showPetById API', function() {
             this.client.setSecurity( 'apiKeyHeaderAuth', 'MyHeaderAuth', new Date().getTime(), async() => {
                 this.client.setSecurity( 'apiKeyHeaderAuth', 'MyHeaderAuth2' );
