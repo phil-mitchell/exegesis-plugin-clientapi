@@ -75,7 +75,8 @@ describe( 'No path in options', function() {
                 }
             };
             let ret = await this.controllers[this.apiDoc.paths['/client/' + file].get['x-exegesis-controller']][
-            this.apiDoc.paths['/client/' + file].get.operationId]( context );
+                this.apiDoc.paths['/client/' + file].get.operationId
+            ]( context );
             expect( context.res.contenttype ).to.equal( 'application/javascript' );
             expect( ret ).to.be.a( 'string' );
             expect( ret.length ).to.be.above( 2500 );
