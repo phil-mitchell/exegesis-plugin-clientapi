@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/phil-mitchell/exegesis-plugin-clientapi/compare/v1.0.2...v1.1.0) (2020-12-21)
+
+
+### Features
+
+* **security:** Support token expiration and refresh callback ([#14](https://github.com/phil-mitchell/exegesis-plugin-clientapi/issues/14)) ([c415fc0](https://github.com/phil-mitchell/exegesis-plugin-clientapi/commit/c415fc06437095a0b752cc0e461641e195a64d4d))
+
 ## [1.0.2](https://github.com/phil-mitchell/exegesis-plugin-clientapi/compare/v1.0.1...v1.0.2) (2020-02-01)
 
 
