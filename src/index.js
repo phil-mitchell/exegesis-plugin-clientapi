@@ -159,6 +159,35 @@ class ClientAPIPlugin {
             clearSecurity() {
                 delete this.security;
             }
+
+            async $applySecurityScheme( schemeName, headers, queryParameters ) {
+                let scheme = ( this.security || {})[schemeName];
+                while( scheme && scheme.expiry && new Date().getTime() >= ( scheme.expiry - 60000 ) ) {
+                    // token is (nearly) expired
+                    if( scheme.refreshCallback ) {
+                        if( !scheme.refreshTokenPromise ) {
+                            scheme.refreshTokenPromise = new Promise( async( resolve, reject ) => {
+                                try {
+                                    resolve( await scheme.refreshCallback() );
+                                } catch( e ) {
+                                    reject( e );
+                                }
+                            });
+                        }
+                        await scheme.refreshTokenPromise;
+                    } else {
+                        delete this.security[schemeName];
+                    }
+                    scheme = ( this.security || {})[schemeName];
+                }
+                if( scheme ) {
+                    Object.assign( headers, scheme.headers || {});
+                    Object.assign( queryParameters, scheme.queryParameters || {});
+                    return scheme.credentials;
+                }
+                return null;
+            }
+
             async $handleAPIOperation( operationName, ...inputParameters ) {
                 let[ method, url ] = operationName.split( ' ', 2 );
                 let operation = clientOperations[operationName];
@@ -198,20 +227,7 @@ class ClientAPIPlugin {
                     throw Error( `Extra parameters were provided` );
                 }
                 for( let schemeName of operation.security || [] ) {
-                    let scheme = ( this.security || {})[schemeName];
-                    if( scheme && scheme.expiry && new Date().getTime() >= ( scheme.expiry - 60000 ) ) {
-                        // token is (nearly) expired
-                        delete this.security[schemeName];
-                        if( scheme.refreshCallback ) {
-                            await scheme.refreshCallback();
-                        }
-                        scheme = ( this.security || {})[schemeName];
-                    }
-                    if( scheme ) {
-                        Object.assign( headers, scheme.headers || {});
-                        Object.assign( queryParameters, scheme.queryParameters || {});
-                        credentials = scheme.credentials || credentials;
-                    }
+                    credentials = ( await this.$applySecurityScheme( schemeName, headers, queryParameters ) ) || credentials;
                 }
 
                 url = new URL( url, window.location.origin );
