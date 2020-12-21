@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/phil-mitchell/exegesis-plugin-clientapi/compare/v1.1.0...v1.1.1) (2020-12-21)
+
+
+### Bug Fixes
+
+* **security:** handle concurrent calls to refresh auth token ([#15](https://github.com/phil-mitchell/exegesis-plugin-clientapi/issues/15)) ([0879aa4](https://github.com/phil-mitchell/exegesis-plugin-clientapi/commit/0879aa426f65b14332ceecefd3e693704aee48cd))
+
 # [1.1.0](https://github.com/phil-mitchell/exegesis-plugin-clientapi/compare/v1.0.2...v1.1.0) (2020-12-21)
 
 
