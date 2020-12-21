@@ -123,13 +123,16 @@ class ClientAPIPlugin {
             get fetchArgs() {
                 return this._fetchArgs;
             }
-            setSecurity( name, value ) {
+            setSecurity( name, value, expiry, refreshCallback ) {
                 var scheme = securitySchemes[name];
                 if( !scheme ) {
                     throw Error( `Unknown security scheme: ${name}` );
                 }
                 this.security = this.security || {};
-                this.security[name] = {};
+                this.security[name] = {
+                    expiry: expiry,
+                    refreshCallback: refreshCallback
+                };
                 if( scheme.type === 'http' ) {
                     this.security[name].headers = {
                         authorization: `${scheme.scheme} ${value}`
@@ -196,6 +199,14 @@ class ClientAPIPlugin {
                 }
                 for( let schemeName of operation.security || [] ) {
                     let scheme = ( this.security || {})[schemeName];
+                    if( scheme && scheme.expiry && new Date().getTime() >= ( scheme.expiry - 60000 ) ) {
+                        // token is (nearly) expired
+                        delete this.security[schemeName];
+                        if( scheme.refreshCallback ) {
+                            await scheme.refreshCallback();
+                        }
+                        scheme = ( this.security || {})[schemeName];
+                    }
                     if( scheme ) {
                         Object.assign( headers, scheme.headers || {});
                         Object.assign( queryParameters, scheme.queryParameters || {});
@@ -273,7 +284,7 @@ class ClientAPIPlugin {
                 if( files[file].minified ) {
                     var clientAPI = {};
                     clientAPI[pluginOptions.path] = apiText;
-                    apiText = Terser.minify( clientAPI ).code;
+                    apiText = ( await Terser.minify( clientAPI ) ).code;
                 }
 
                 context.res.set( 'content-type', 'application/javascript' );
