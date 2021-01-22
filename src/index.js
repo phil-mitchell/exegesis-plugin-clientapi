@@ -97,8 +97,12 @@ class ClientAPIPlugin {
         var securitySchemes = Object.assign({}, ( apiDoc.components || {}).securitySchemes || {});
         var allowCORS = !!pluginOptions.allowCORS;
         class ClientAPI {
-            constructor( fetchArgs ) {
+            constructor( fetchArgs, base ) {
                 this._fetchArgs = fetchArgs || {};
+                this._baseUrl = base || window.location;
+                if( typeof( this._baseUrl ) === 'string' ) {
+                    this._baseUrl = new URL( this._baseUrl, window.location.origin );
+                }
                 return new Proxy( this, {
                     has: function( object, property ) {
                         if( typeof( property ) !== 'string' || Reflect.has( object, property ) ) {
@@ -230,7 +234,7 @@ class ClientAPIPlugin {
                     credentials = ( await this.$applySecurityScheme( schemeName, headers, queryParameters ) ) || credentials;
                 }
 
-                url = new URL( url, window.location.origin );
+                url = new URL( url, this._baseUrl.origin );
                 Object.keys( queryParameters ).forEach( key => url.searchParams.append( key, queryParameters[key] ) );
 
                 var fetchArgs = Object.assign({}, this.fetchArgs, {
