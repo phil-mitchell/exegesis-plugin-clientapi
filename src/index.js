@@ -99,10 +99,7 @@ class ClientAPIPlugin {
         class ClientAPI {
             constructor( fetchArgs, base ) {
                 this._fetchArgs = fetchArgs || {};
-                this._baseUrl = base || window.location;
-                if( typeof( this._baseUrl ) === 'string' ) {
-                    this._baseUrl = new URL( this._baseUrl, window.location.origin );
-                }
+                this._baseUrl = base || window.location.href;
                 return new Proxy( this, {
                     has: function( object, property ) {
                         if( typeof( property ) !== 'string' || Reflect.has( object, property ) ) {
@@ -234,7 +231,7 @@ class ClientAPIPlugin {
                     credentials = ( await this.$applySecurityScheme( schemeName, headers, queryParameters ) ) || credentials;
                 }
 
-                url = new URL( url, this._baseUrl.origin );
+                url = new URL( '.' + url, this._baseUrl );
                 Object.keys( queryParameters ).forEach( key => url.searchParams.append( key, queryParameters[key] ) );
 
                 var fetchArgs = Object.assign({}, this.fetchArgs, {
@@ -247,7 +244,7 @@ class ClientAPIPlugin {
                     if( !response.ok ) {
                         let e = new Error( response.statusText );
                         e.response = response;
-                        let contentType = response.headers.get( 'Content-Type' );
+                        let contentType = response.headers.get( 'Content-Type' ) || '';
                         if( contentType.startsWith( 'application/json' ) ) {
                             return response.json().then( data => {
                                 e.message = data.message || JSON.strigify( data );
