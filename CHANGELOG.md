@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/phil-mitchell/exegesis-plugin-clientapi/compare/v1.1.2...v1.1.3) (2021-01-22)
+
+
+### Bug Fixes
+
+* **path:** handle base path properly ([#18](https://github.com/phil-mitchell/exegesis-plugin-clientapi/issues/18)) ([fd63022](https://github.com/phil-mitchell/exegesis-plugin-clientapi/commit/fd63022b5adc04a755080e0fa633e01f8f9fcd6f))
+
 ## [1.1.2](https://github.com/phil-mitchell/exegesis-plugin-clientapi/compare/v1.1.1...v1.1.2) (2021-01-22)
 
 

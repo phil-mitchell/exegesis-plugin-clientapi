@@ -1,6 +1,6 @@
 {
   "name": "exegesis-plugin-clientapi",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "Exegesis plugin to serve a client API based on the openAPI definition",
   "main": "src/index.js",
   "engines": {
