@@ -1,3 +1,10 @@
+## [1.1.4](https://github.com/phil-mitchell/exegesis-plugin-clientapi/compare/v1.1.3...v1.1.4) (2021-05-09)
+
+
+### Bug Fixes
+
+* **deps:** Update dependencies for security issues ([4252c09](https://github.com/phil-mitchell/exegesis-plugin-clientapi/commit/4252c0924f48218a2a668caf446c4e4a3989102b))
+
 ## [1.1.3](https://github.com/phil-mitchell/exegesis-plugin-clientapi/compare/v1.1.2...v1.1.3) (2021-01-22)
 
 
