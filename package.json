@@ -46,7 +46,7 @@
     "grunt-mkdir": "1.1.0",
     "grunt-mocha-test": "^0.13.3",
     "istanbul": "^0.4.5",
-    "karma": "6.3.2",
+    "karma": "6.3.14",
     "karma-chai": "^0.1.0",
     "karma-chrome-launcher": "^3.1.0",
     "karma-mocha": "2.0.1",
