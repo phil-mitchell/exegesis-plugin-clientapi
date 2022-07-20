@@ -23,7 +23,7 @@
   "homepage": "https://github.com/phil-mitchell/exegesis-plugin-clientapi#readme",
   "dependencies": {
     "semver": "7.3.5",
-    "terser": "5.7.0"
+    "terser": "5.14.2"
   },
   "devDependencies": {
     "@semantic-release/changelog": "5.0.1",
